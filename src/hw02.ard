@@ -3,6 +3,10 @@
 
 -- I. Задания на рекурсивные определения.
 
+\func if {A : \Type} (cond : Bool) (then else : A) : A \elim cond
+  | true => then
+  | false => else
+
 -- 1. Определите функцию if, аналогичную следующей функции:
 {- Haskell:
    if :: Bool -> a -> a -> a
@@ -12,20 +16,72 @@
 
 -- 2. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => {?}
+\func \infixr 2 || (x y : Bool) : Bool => if x true y
+\func testIfOr1 : true || false = true => idp
+\func testIfOr2 : false || false = false => idp
 
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
-\func \infixr 8 ^ (x y : Nat) => {?}
+\func \infixr 8 ^ (x y : Nat) : Nat \elim y
+  | 0 => 1
+  | suc n => x * x ^ n
 
-\func fac (x : Nat) => {?}
+\func testPower1 : 2 ^ 2 = 4 => idp
+\func testPower2 : 3 ^ 4 = 81 => idp
+\func testPower3 : 3 ^ 0 = 1 => idp
+
+\func fac (x : Nat) : Nat \elim x
+  | 0 => 1
+  | suc n => (suc n) * (fac n)
+\func testFac1 : fac 5 = 120 => idp
+\func testFac2 : fac 6 = 720 => idp
+\func testFac3 : fac 1 = 1 => idp
 
 -- 4. Определите mod и gcd.
 
-\func mod (x y : Nat) => {?}
+\func mod (x y : Nat) : Nat => x - (div x y) * y
+\func testMod1 : mod 5 5 = 0 => idp
+\func testMod2 : mod 6 5 = 1 => idp
+\func testMod3 : mod 7 9 = 7 => idp
 
-\func gcd (x y : Nat) => {?}
+\func gcd (x y : Nat) => gcd' x x y
+    \where
+      \func gcd' (s x y : Nat) : Nat \elim s
+        | 0 => 1
+        | suc s  => if (y < 1) x (gcd' s y (mod x y))
+
+\func gcdTest1 : gcd 6 3 = 3 => idp
+\func gcdTest2 : gcd 3 3 = 3 => idp
+\func gcdTest3 : gcd 2 3 = 1 => idp
+\func gcdTest4 : gcd (2 * 3 * 5 * 7) (2 * 3 * 5 * 11) = (2 * 3 * 5) => idp
 
 -- 5. Определите (полиморфный) reverse для списков.
+\func reverse {A : \Type} (l : List A) : List A \elim l
+  | nil => nil
+  | cons x xs => (reverse xs) ++ cons x nil
+
+\func reverseTest1 : reverse (cons 4 (cons 3 (cons 2 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func reverseTest2 : reverse {Bool} nil = nil => idp
+\func reverseTest3 : reverse (cons 1 nil) = (cons 1 nil) => idp
 
 -- 6. Реализуйте любой (but choose wisely) алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
+
+\func insertionSort {A : \Type} (f : A -> A -> Bool) (l : List A) : List A \elim l
+  | nil => nil
+  | cons x xs =>
+    \let
+      | tail => insertionSort f xs
+      \in insertHead f x tail
+  \where
+    \func insertHead {A : \Type} (f : A -> A -> Bool) (x : A) (l : List A) : List A \elim l
+      | nil => cons x nil
+      | cons y ys => if (f x y) (cons x (cons y ys)) (cons y (insertHead f x ys))
+
+\func insertionSortTest1 :
+  insertionSort (<) (cons 4 (cons 2 (cons 3 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSortTest2 :
+  insertionSort (<) (cons 4 (cons 3 (cons 2 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSortTest3 :
+  insertionSort (<) (cons 1 (cons 2 (cons 3 (cons 4 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+
+

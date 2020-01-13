@@ -1,7 +1,29 @@
 -- 1. Установите arend, следуя инструкциям на странице https://arend-lang.github.io/download
 --    В IDEA можно просто импортировать данный проект.
 
--- 2. Определите аналоги следующих функций на языке хаскелл.
+-- 2. Определите аналоги следующих. функций на языке хаскелл
+\func second (_ y _ : Nat) => y
+\func secondTest1 : second 100 5 100 = 5 => idp
+\func secondTest2 : second 1 2 3 = 2 => idp
+
+\func apply (f : Nat -> Nat) (x : Nat) => f x
+\func applyTest1 : apply id 3 = 3 => idp
+\func applyTest2 : apply suc 4 = 5 => idp
+
+\func dec (x : Nat) : Nat
+  | 0 => 0
+  | suc n => n
+\func decTest : dec 3 = 2 => idp
+
+\func compose (f : Nat -> Nat) (g : Nat -> Nat) (x : Nat) => f (g x)
+\func composeTest1 : compose suc id 4 = 5 => idp
+\func composeTest2 : compose id suc 4 = 5 => idp
+\func composeTest3 : compose dec suc 4 = 4 => idp
+\func composeTest4 : compose suc dec 4 = 4 => idp
+
+
+\func flip (f : Nat -> Nat -> Nat) (x y : Nat) => f y x
+
 {- Haskell:
    second :: Nat -> Nat -> Nat -> Nat
    second _ y _ = y
@@ -22,11 +44,11 @@
 
 \import lect01
 
-\func f1 (x y : Nat) => x
-\func f2 : Nat => 0
-\func f3 (f : Nat -> Nat) (z : Nat) : Int => 0
-\func f4 : Nat => 0
-\func f5 => f1
-\func f6 => f4
+\func \fix 2 f1 (x y : Nat) => x
+\func \fix 3 f2 : Nat => 0
+\func \infix 1 f3 (f : Nat -> Nat) (z : Nat) : Int => 0
+\func \fix 5 f4 : Nat => 0
+\func \infix 4 f5 => f1
+\func \fix 6 f6 => f4
 
 \func test => f1 f2 f3 f4 f5 f6
