@@ -1,5 +1,6 @@
 \import Utils
 \import lect02 \using (&& \as &&1) \hiding (+)
+\import lect03 (M5, fileTest)
 
 -- 1. Докажите ассоциативность && и ||.
 
@@ -47,21 +48,37 @@
 -- 5. Докажите следующие утверждения.
 
 -- s1 : Если для любого x : Nat верно P(x), то существует x : Nat для которого P(x) верно.
-\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => {?}
+\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => (0, h 0)
 
 -- s2 : Если не существует x : Nat такого, что верно P(x), то P(3) не верно.
-\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => {?}
+\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => (\lam p => h (3, p))
 
 -- 6. Сформулируйте и докажите следующие утверждения.
 
 -- s3 : Если для всех x : Nat верно, что P(x) влечет Q(x), и существует x : Nat для которого верно P(x), то существует x : Nat для которого верно Q(x).
 
+\func s3 (P Q : Nat -> \Type) (h : \Pi (x : Nat) -> P x -> Q x) (g : \Sigma (x : Nat) (P x)) : \Sigma (x : Nat) (Q x) =>
+  (g.1, h g.1 g.2)
+
 -- s4 : Если для всех x : Nat либо не верно P(x), либо не верно Q(x), то P(3) влечет, что Q(3) не верно.
+
+\func s4 (P Q : Nat -> \Type) (h : \Pi (x : Nat) -> Either (P x -> Empty) (Q x -> Empty)) : P 3 -> (Q 3 -> Empty) =>
+  \lam p q =>
+      \case (h 3) \with {
+        | inl a => a p
+        | inr b => b q
+      }
 
 -- 7. Чему равно fileTest (в нормальной форме)? Докажите это.
 
+\func fileTestNormalForm : (17, 8, 13, 55, 18, 21) = fileTest => idp
+
 -- 8. Чему равно M5.t''' (в нормальной форме)? Докажите это.
+
+\func M5t'''NormalForm : ((82, 42, 61, 82, 34, 42, 61, 29), 25, (42, 29)) = M5.t''' => idp
 
 -- 9. Докажите ассоциативность ++.
 
-\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+  | nil => idp
+  | cons a l => pmap (cons a) (++-assoc l ys zs)
