@@ -1,21 +1,24 @@
 \import Utils
+\import hw03
+\import lect05 (trans)
 \open Nat \hiding (<=)
 
 -- 1. Определите конгруэнтность для функций двух аргументов через transport.
 --    Можно использовать любые функции, определенные через transport.
 
-\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' =>
+  transport (\lam x => f a b = f a' x) q (transport (\lam y => f a b = f y b) p idp)
 
 -- 2. Докажите, что transport выражается через pmap и repl и наоборот.
 
 -- repl говорит, что если у нас есть два равных типа, то у нас есть функция из одного во второй.
 -- Определите repl через transport.
 
-\func repl {A B : \Type} (p : A = B) (a : A) : B => {?}
+\func repl {A B : \Type} (p : A = B) (a : A) : B => transport (\lam x => x) p a
 
 -- Определите transport через repl и pmap.
 
-\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => repl (pmap B p) b
 
 -- 3. Докажите, что reverse (reverse xs) = xs, где reverse определен через ++.
 
@@ -29,10 +32,26 @@
   | nil => nil
   | cons x xs => reverse xs ++ cons x nil
 
--- Это утверждение будет полезно для доказательства.
-\func reverse++ {A : \Type} (xs ys : List A) : reverse (xs ++ ys) = reverse ys ++ reverse xs => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+  | nil => idp
+  | cons a l => pmap (cons a) (++-assoc l ys zs)
 
-\func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs => {?}
+\func ++nil1 {A : \Type} (xs : List A) : xs ++ nil = xs \elim xs
+  | nil => idp
+  | cons a l => pmap (cons a) (++nil1 l)
+
+\func ++nil2 {A : \Type} (xs : List A) : xs = xs ++ nil \elim xs
+  | nil => idp
+  | cons a l => pmap (cons a) (++nil2 l)
+
+-- Это утверждение будет полезно для доказательства.
+\func reverse++ {A : \Type} (xs ys : List A) : reverse (xs ++ ys) = reverse ys ++ reverse xs \elim xs
+  | nil => ++nil2 (reverse ys)
+  | cons a l => trans (pmap (\lam u => u ++ (cons a nil)) (reverse++ l ys)) (++-assoc (reverse ys) (reverse l) (cons a nil))
+
+\func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs \elim xs
+  | nil => idp
+  | cons a l => {?}
 
 -- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
