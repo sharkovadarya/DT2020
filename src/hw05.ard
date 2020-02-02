@@ -1,6 +1,7 @@
 \import Utils
 \import hw03
-\import lect05 (trans)
+\import lect04
+\import lect05 (+-comm, Nat-elim, Nat-rec, trans)
 \open Nat \hiding (<=)
 
 -- 1. Определите конгруэнтность для функций двух аргументов через transport.
@@ -51,13 +52,25 @@
 
 \func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs \elim xs
   | nil => idp
-  | cons a l => {?}
+  | cons a l => trans (reverse++ (reverse l) (cons a nil)) (pmap (cons a) (reverse-isInvolutive l))
 
 -- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
-\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k \elim k
+  | 0 => idp
+  | suc k => trans ((pmap (\lam u => u + n) (ldistr n m k))) (+-assoc (n * m) (n * k) n)
 
-\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
+\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n \elim n
+  | 0 => idp
+  | suc n =>
+    (m + k) * n + (m + k) ==< pmap (\lam x => x + (m + k)) (rdistr n m k) >==
+    m * n + k * n + (m + k) ==< +-assoc (m * n) (k * n) (m + k) >==
+    m * n + (k * n + (m + k)) ==< pmap (\lam x => m * n + x) (sym (+-assoc (k * n) m k)) >==
+    m * n + (k * n + m + k) ==< pmap (\lam x => m * n + (x + k)) (+-comm (k * n) m) >==
+    m * n + (m + k * n + k) ==< pmap (\lam x => m * n + x) (+-assoc m (k * n) k) >==
+    m * n + (m + ((k * n) + k)) ==< sym (+-assoc (m * n) m ((k * n) + k)) >==
+    m * n + m + (k * n + k) `qed
+
 
 -- 5. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
@@ -65,11 +78,20 @@
   | true => false
   | false => true
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => path (\lam i x => notNot x @ i)
+    \where
+      \func notNot (x : Bool) : (not (not x) = x) \elim x
+        | true => idp
+        | false => idp
 
 -- 6. Определите факториал через Nat-rec.
 
+\func fac' (n : Nat) : Nat => Nat-rec Nat 1 (\lam m k => (suc m) * k) n
+
 -- 7. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
+
+\func +-assoc' (x y z : Nat) : x + y + z = x + (y + z) =>
+  Nat-elim (\lam z => x + y + z = x + (y + z)) idp (\lam _ p => pmap suc p) z
 
 -- 8. Определите рекурсор и элиминатор для D.
 
@@ -78,11 +100,32 @@
   | con2 D D
   | con3 (Nat -> D)
 
+
 -- 9. Определите рекурсор и элиминатор для List.
+
+\func List-rec {A : \Type}
+               (P : \Type)
+               (z : P)
+               (s : A -> (List A)-> P -> P)
+               (xs : List A) : P \elim xs
+  | nil => z
+  | cons a l => s a l (List-rec P z s l)
+
+\func List-elim {A : \Type }
+                (P : List A -> \Type)
+                (z : P nil)
+                (s : \Pi (x : A) (xs : List A) -> P xs -> P (cons x xs))
+                (xs : List A) : P xs \elim xs
+  | nil => z
+  | cons a l => s a l (List-elim P z s l)
 
 -- 10. Докажите, что 0 не равно suc x.
 
-\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => {?}
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => transport helper p ()
+    \where
+      \func helper (x : Nat) : \Type \elim x
+        | 0 => \Sigma
+        | suc n => Empty
 
 -- 11. Докажите, что fac не равен suc.
 
@@ -96,28 +139,28 @@
 
 -- 12. Докажите, что left = right, не используя transport, coe и паттерн матчинг с idp.
 
-\func left=right : left = right => {?}
+\func left=right : left = right => path (\lam i => i)
 
 -- 13. Докажите, что если a = a' и b = b', то (a,b) = (a',b'), не используя transport, coe и паттерн матчинг с idp.
 
-\func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b') => {?}
+\func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b') => path (\lam i => (p @ i, q @ i))
 
 -- 14. Докажите, что если p = p', то p.1 = p'.1, не используя transport, coe и паттерн матчинг с idp.
 
-\func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1 => {?}
+\func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1 => path (\lam i => (t @ i).1)
 
 -- 15. Докажите pmap2, не используя transport, coe и паттерн матчинг с idp.
 
-\func pmap2' {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+\func pmap2' {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => path (\lam i => f (p @ i) (q @ i))
 
 -- 16. Мы видели как определить transport через coe. Определите частный случай coe через transport.
 --     Можно ли определить transport через coe0?
 
-\func coe0 (A : I -> \Type) (a : A left) : A right => {?}
+\func coe0 (A : I -> \Type) (a : A left) : A right => transport A (path (\lam i => i)) a
 
 -- 17. Определите функцию B right -> B left.
 
-\func Itr' {B : I -> \Type} (b : B right) : B left => {?}
+\func Itr' {B : I -> \Type} (b : B right) : B left => transport B (sym left=right) b
 
 -- 18. У оператора J есть другая форма, которую мы будем называть Jalt. Докажите, что J и Jalt эквивалентны, то есть выразите одно через другое и наоборот.
 
