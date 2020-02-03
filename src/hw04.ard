@@ -1,7 +1,7 @@
 \import Utils
 \import hw02 (if)
 \import lect03 (==)
-\import lect04
+\import lect04 \using (lookup \as vlookup)
 
 -- 1. Напишите функцию lookup, которая принимает List A и натуральное число и возвращает элемент по заданому индексу.
 --    В общем случае эту функцию определить невозможно, т.к. индекс может быть больше, чем число элементов в списке.
@@ -64,6 +64,9 @@
       \func next {n : Nat} (x : Fin n) : Fin (suc n) \elim n, x
         | suc n, fzero => fsuc fzero
         | suc n, fsuc f => fsuc (next f)
+
+-- coin возвращает константный список всегда
+\func coin_test : coin (vlookup (vcons 0 (vcons 1 (vcons 2 vnil)))) = vcons 0 (vcons 1 (vcons 2 vnil)) => idp
 
 -- 6. Определите тип матриц и ряд функций над ними.
 
@@ -128,4 +131,5 @@
       | false => j
     }
     -- sidenote: why doesn't `if (toNat j < toNat i) i j` work? 'Expected type: Bool; Actual type: Bool'???
+    -- Возможно опять разные типы Bool.
 
