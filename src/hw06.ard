@@ -1,8 +1,7 @@
 \import Utils
 \import hw01
-\import hw02 (if)
 \import lect03 (==)
-\import lect05 (+-comm)
+\import lect05 (+-comm, funExt)
 \import lect06 \hiding (<=-refl)
 \open Nat(+,*)
 
@@ -180,7 +179,16 @@
   | repeated (n : Nat) (a : A) (p : xs = repeat n a)
   | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
 
-\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs => {?}
+\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs \elim xs
+  | nil => empty idp
+  | cons a l => \case (lemma l {dec}) \with {
+    | empty p => repeated 1 a (pmap (cons a) p)
+    | repeated n a1 p => \case dec a a1 \with {
+      | yes q => repeated (n + 1) a (pmap (cons a) p *> (pmap (cons a) (pmap (repeat n) (sym q))))
+      | no q => A-is-not-trivial a a1 q
+    }
+    | A-is-not-trivial a a' p => A-is-not-trivial a a' p
+  }
 
 -- 14. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
 --    Реализуйте функцию деления.
