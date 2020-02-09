@@ -1,43 +1,146 @@
 \import Utils
+\import hw01
+\import hw02 (if)
+\import lect03 (==)
 \import lect05 (+-comm)
 \import lect06 \hiding (<=-refl)
 \open Nat(+,*)
 
 -- 1. Докажите, что vnil является нейтральным элементом для v++.
 
-\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs => {?}
+\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons a v => lem v a (+-comm 0 n) *> pmap (vcons a) (vnil-rightId v)
+  \where
+    \func lem {A : \Type} {n : Nat} (xs : Vec A n) (a : A) {x : Nat} (p : 0 + n = x) :
+      transport (Vec A) (pmap suc p) (vcons a (xs v++ vnil)) = vcons a (transport (Vec A) p (xs v++ vnil)) \elim p
+      | idp => idp
 
 -- 2. Определите предикат принадлежности элемента списку.
 
-\data In {A : \Type} (a : A) (xs : List A)
+\data In {A : \Type} (a : A) (xs : List A) \elim xs
+  | cons x xs => in= (a = x)
+  | cons _ xs => in- (In a xs)
 
 -- 3. Докажите эквивалентность четырех различных определений LessOrEq: lessOrEq, lessOrEq', LessOrEq и LessOrEq'.
+\func eq1 (n m : Nat) : lessOrEq n m = lessOrEq' n m => {?}
 
 -- 4. Определите рефлексивное транзитивное замыкание отношения.
 --    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
 
 \data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
+  | refl-c (x = y)
+  | trans-c (z : A) (p : R x z) (q : ReflTransClosure R z y)
 
--- 5. Докажите, что если R уже рекфлексивно и транзитивно, то ReflTransClosure R эквивалентно R.
+-- 5. Докажите, что если R уже рефлексивно и транзитивно, то ReflTransClosure R эквивалентно R.
 
 \func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
   : \Pi (x y : A) -> R x y <-> ReflTransClosure R x y
-  => {?}
+  => (\lam x y => ((\lam a => (trans-c y a (refl-c idp))), (\lam a => helper R refl trans a)))
+  \where
+    \func helper {A : \Type}
+                 {x y : A}
+                 (R : A -> A -> \Type)
+                 (refl : \Pi (x : A) -> R x x)
+                 (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+                 (m : ReflTransClosure R x y)
+                 : R x y \elim m
+      | refl-c p => transport (R x) p (refl x)
+      | trans-c z p q => trans x z y p (helper R refl trans q)
 
 -- 6. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
+\data Sublist {A : \Type} (xs ys : List A) \elim xs, ys
+  | nil, _ => isSublist
+  | cons x xs, cons y ys => hasMatch (x = y) (Sublist xs ys)
+  | xs, cons _ ys => noMatchYet (Sublist xs ys)
 
 -- 7. Докажите, что Sublist (filter xs) xs для любого списка xs.
+\func filterIsSublist {A : \Type} (xs : List A) (p : A -> Bool) : Sublist (filter p xs) xs \elim xs
+  | nil => isSublist
+  | cons a l => \case p a \as b \return Sublist (\case b \with {
+    | true => cons a (filter p l)
+    | false => filter p l
+  }) (cons a l) \with {
+    | true => hasMatch idp (filterIsSublist l p)
+    | false => noMatchYet (filterIsSublist l p)
+  }
 
 -- 8. Реализуйте любой алгоритм сортировки, используя \case для паттерн матчинга на результате сравнения элементов списка.
+
+-- a basic version. because it is not stated that Ordering must be used instead of Bool
+\func insertionSort {A : \Type} (f : A -> A -> Bool) (l : List A) : List A \elim l
+  | nil => nil
+  | cons x xs =>
+    \let
+      | tail => insertionSort f xs
+    \in insertHead f x tail
+  \where
+    \func insertHead {A : \Type} (f : A -> A -> Bool) (x : A) (l : List A) : List A \elim l
+      | nil => cons x nil
+      | cons y ys => \case f x y \with {
+        | true => cons x (cons y ys)
+        | false => cons y (insertHead f x ys)
+      }
+
+\func insertionSortTest1 :
+  insertionSort (<b) (cons 4 (cons 2 (cons 3 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSortTest2 :
+  insertionSort (<b) (cons 4 (cons 3 (cons 2 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSortTest3 :
+  insertionSort (<b) (cons 1 (cons 2 (cons 3 (cons 4 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+
+-- this version uses Ordering
+\func insertionSort' {A : \Type} (f : A -> A -> Ordering) (l : List A) : List A \elim l
+  | nil => nil
+  | cons x xs =>
+    \let
+      | tail => insertionSort' f xs
+    \in insertHead f x tail
+  \where
+    \func insertHead {A : \Type} (f : A -> A -> Ordering) (x : A) (l : List A) : List A \elim l
+      | nil => cons x nil
+      | cons y ys => \case f x y \with {
+        | LT => cons x (cons y ys)
+        | _ => cons y (insertHead f x ys)
+      }
+
+\func insertionSort'Test1 :
+  insertionSort' compare (cons 4 (cons 2 (cons 3 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSort'Test2 :
+  insertionSort' compare (cons 4 (cons 3 (cons 2 (cons 1 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+\func insertionSort'Test3 :
+  insertionSort' compare (cons 1 (cons 2 (cons 3 (cons 4 nil)))) = (cons 1 (cons 2 (cons 3 (cons 4 nil)))) => idp
+
 
 -- 9. Определите filter через if, а не через \case.
 --    Докажите для этой версии filter лемму filter-lem.
 
-\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A => {?}
+\func if {A : \Type} (cond : Bool) (then else : A) : A \elim cond
+  | true => then
+  | false => else
 
-\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs => {?}
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  -- why can't if be imported from hw2? the signature is literally the same
+  | cons a l => if (p a) (cons a (filter' p l)) (filter' p l)
+
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs \elim xs
+  | nil => Nat.zero<=_
+  | cons a l => \case p a \as b \return length (if b (cons a (filter' p l)) (filter' p l)) Nat.<= suc (length l) \with {
+    | true => Nat.suc<=suc (filter-lem p l)
+    | false => <=-helper (filter-lem p l)
+  }
 
 -- 10. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
+  \case \elim x, f true \as p, idp : f true = p, f false \as q, idp : f false = q \with {
+    | true, true, ft, _, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
+    | true, false, ft, true, ff => pmap (\lam x => f (f x)) ft *> pmap f ff
+    | true, false, ft, false, ff => pmap (\lam x => f (f x)) ft *> pmap f ff *> (ff *> sym ft)
+    | false, true, ft, true, ff => pmap (\lam x => f (f x)) ff *> pmap f ft *> (ft *> sym ff)
+    | false, _, _, false, ff => pmap (\lam x => f (f x)) ff *> pmap f ff
+    | false, false, ft, true, ff => pmap (\lam x => f (f x)) ff *> pmap f ft
+  }
 
 -- 11. Парадокс Рассела показывает, что не существует множества всех множеств.
 -- Если такое множеств существует, то мы можем определить множество B, состоящее из множеств, не содержащих себя.
@@ -55,7 +158,16 @@
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
 
-\func isEven-dec : DecPred isEven => {?}
+\func isEven-dec : DecPred isEven => \lam n => \case parity n \with {
+  | even k p => yes (k, p)
+  | odd k p => no (\lam x => oddNotEven k x.1 (sym p *> x.2))
+}
+  \where
+    \func oddNotEven (k m : Nat) (p : suc (2 * k) = 2 * m) : Empty \elim k, m
+      | _, 0 => suc/=0 p
+      | 0, suc n => suc/=0 (pmap (\lam x => dec x) (sym p))
+      | suc k, suc m => oddNotEven k m (pmap (\lam x => dec (dec x)) p)
+
 
 -- 13. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
 
