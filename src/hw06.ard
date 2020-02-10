@@ -233,11 +233,38 @@
 
 -- 15. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
-\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p =>
+  funExt (\lam _ => Bool)
+         (\lam x => \case p x \as b \return
+         (\case \case b \as b \return Decide (T b)
+                \with {
+                  | true => yes ()
+                  | false => no absurd
+                }
+         \with {
+           | yes _ => true
+           | no _ => false
+         }) = b \with {
+           | true => idp
+           | false => idp
+         })
 
 -- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
 -- Для этого введем эквивалентность предикатов.
 
 \func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
-  : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x
-  => {?}
+  : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x =>
+  \lam x => \case P.2 x \as b \return
+  (\Sigma
+    (T (\case b \with {
+      | yes _ => true
+      | no _ => false
+    }) -> P.1 x)
+    (P.1 x -> T (\case b \with {
+      | yes _ => true
+      | no _ => false
+    })))
+  \with {
+    | yes a => (\lam _ => a, \lam _ => ())
+    | no a => ((\lam x => absurd x), a)
+  }
