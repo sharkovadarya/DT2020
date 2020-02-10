@@ -72,6 +72,7 @@
     m * n + m + (k * n + k) `qed
 
 
+{-
 -- rdistr можно реализовать через ldistr и *-comm.
 -- Ниже приведен план доказательства *-comm.
 \func *-comm (n m : Nat) : n * m = m * n
@@ -87,6 +88,7 @@
       (n * m + n) + m ==< idp >==
       n * suc m + m   ==< {?} >==
       suc m * n + m   `qed)
+-}
 
 -- 5. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
