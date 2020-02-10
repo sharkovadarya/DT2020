@@ -2,7 +2,7 @@
 \import hw01
 \import lect03 (==)
 \import lect05 (+-comm, funExt)
-\import lect06 \hiding (<=-refl)
+\import lect06
 \open Nat(+,*)
 
 -- 1. Докажите, что vnil является нейтральным элементом для v++.
@@ -22,7 +22,38 @@
   | cons _ xs => in- (In a xs)
 
 -- 3. Докажите эквивалентность четырех различных определений LessOrEq: lessOrEq, lessOrEq', LessOrEq и LessOrEq'.
-\func eq1 (n m : Nat) : lessOrEq n m = lessOrEq' n m => {?}
+\func pushSuc (n m : Nat) : suc n + m = suc (n + m) \elim n, m
+  | _, 0 => idp
+  | n, suc m => pmap suc (pushSuc n m)
+
+\func eq1 (n m : Nat) (p : lessOrEq n m) : lessOrEq' n m \elim n, m, p
+  | 0, _, _ => ()
+  | suc n, 0, (k, p) => suc/=0 (sym (pushSuc n k) *> p)
+  | suc n, suc m, (k, p) => eq1 n m (k, pmap dec (transport (\lam x => x = suc m) (pushSuc n k) p))
+
+\func eq2 (n m : Nat) (p : lessOrEq' n m) : LessOrEq n m \elim n, m
+  | 0, _ => z<=n
+  | suc n, suc m => s<=s (eq2 n m p)
+
+\func eq3 (n m : Nat) (p : LessOrEq n m) : LessOrEq' n m \elim n, m, p
+  | 0, 0, z<=n => <=-refl idp
+  | 0, suc n, z<=n => <=-step (eq3 0 n z<=n)
+  | suc n, suc m, s<=s l => helper n m (eq3 n m l)
+    \where
+      \func helper (n m : Nat) (p : LessOrEq' n m) : LessOrEq' (suc n) (suc m) \elim n, m, p
+        | 0, 0, <=-refl = => <=-refl idp
+        | 0, suc n, <=-step l => <=-step (helper 0 n l)
+        | suc n, 0, <=-refl = => absurd (suc/=0 =)
+        | _, suc m, <=-refl = => <=-refl (pmap suc =)
+        | suc n, suc m, <=-step l => <=-step (helper (suc n) m l)
+
+\func eq4 (n m : Nat) (p : LessOrEq' n m) : lessOrEq n m \elim n, m, p
+  | 0, 0, <=-refl = => (0, idp)
+  | 0, suc m, <=-refl = => absurd (suc/=0 (sym =))
+  | 0, suc m, <=-step l => (suc m, pmap suc (+-comm 0 m))
+  | suc n, 0, <=-refl = => absurd (suc/=0 =)
+  | suc n, suc m, <=-refl = => (0, =)
+  | suc n, suc m, <=-step l => (suc (eq4 (suc n) m l).1, pmap suc (eq4 (suc n) m l).2)
 
 -- 4. Определите рефлексивное транзитивное замыкание отношения.
 --    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
@@ -151,7 +182,7 @@
 -- Это легко доказать при помощи исключенного третьего, но утверждение верно и без него.
 -- Докажите этот факт.
 \func contrProp {A : \Type} (p : A -> Not A) (q : Not A -> A) : Empty
-  => {?}
+  => p (q (\lam x => p x x)) (q (\lam x => p x x))
 
 -- 12. Докажите, что предикат isEven разрешим.
 
