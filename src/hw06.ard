@@ -152,6 +152,7 @@
 \func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
   | nil => nil
   -- why can't if be imported from hw2? the signature is literally the same
+  -- because it uses Bool from lect02, but this filter' refers to Bool defined in Utils
   | cons a l => if (p a) (cons a (filter' p l)) (filter' p l)
 
 \func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs \elim xs
