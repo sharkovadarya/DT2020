@@ -1,6 +1,7 @@
 \import Utils
 \import hw02 (gcd)
 \import hw05 (pmap2)
+\import lect05 (funExt)
 \import lect06 (DecEq, Decide, no, yes)
 \import lect07
 
@@ -73,27 +74,112 @@
 \class Monad \extends Functor
   | return {A : \Type} : A -> F A
   | \infixl 1 >>= {A B : \Type} : F A -> (A -> F B) -> F B
+  | left-id {A B : \Type} (a : A) (f : A -> F B) : ((return a) >>= f) = f a
+  | right-id {A : \Type} (ma : F A) : (ma >>= return) = ma
+  | bind-assoc {A B C : \Type} (ma : F A) (f : A -> F B) (g : B -> F C) : (ma >>= (\lam x => f x >>= g)) = (ma >>= f >>= g)
+  | fmap f ma => ma >>= (\lam x => return (f x))
+  | fmap-id {A : \Type} (y : F A) => right-id y
+  | fmap-comp {A B C : \Type} (f : A -> B) (g : B -> C) (y : F A) =>
+    (y >>= (\lam x => return (g (f x))))
+          ==< sym (path (\lam i => y >>= (\lam x => ((left-id (f x) (\lam x => return (g x))) @ i)))) >==
+    (y >>= (\lam x => return (f x) >>= (\lam x => return (g x))))
+          ==< bind-assoc y (\lam x => return (f x)) (\lam x => return (g x)) >==
+    ((y >>= (\lam x => return (f x))) >>= (\lam x => return (g x))) `qed
 
 -- 7. Определите \instance Monad для Maybe.
 
-\instance MaybeMonad : Monad Maybe => {?}
+\instance MaybeMonad : Monad Maybe
+  | return => just
+  | \infixl 1 >>= {A B : \Type} (ma : Maybe A) (f : A -> Maybe B) : Maybe B \elim ma {
+    | nothing => nothing
+    | just a => f a
+  }
+  | left-id a f => idp
+  | right-id {A : \Type} (ma : Maybe A) : (ma >>= just ) = ma \elim ma {
+    | nothing => idp
+    | just a => idp
+  }
+  | bind-assoc {A B C : \Type} (ma : Maybe A) (f : A -> Maybe B) (g : B -> Maybe C) :
+               (ma >>= (\lam x => f x >>= g)) = (ma >>= f >>= g) \elim ma {
+    | nothing => idp
+    | just a => idp
+  }
 
 -- 8. Определите \instance Monad для State и State'.
 
 \record State (S A : \Type)
   | state : S -> \Sigma S A
 
+\instance StateMonad (S : \Type) : Monad (\lam A => State S A)
+  | return a => \new State {
+    | state s => (s, a)
+  }
+  | >>= st f => \new State {
+    | state s => state {f (state {st} s).2} (state {st} s).1
+  }
+  | left-id a f => idp
+  | right-id ma => idp
+  | bind-assoc ma f g => idp
+
 \data State' (S A : \Type)
   | state' (S -> \Sigma S A)
 
 -- 9. Определите \instance Monad для Term.
 
+\func fMaybe {A B : \Type} (f : A -> Term B) (a : Maybe A)  : Term (Maybe B) \elim a
+  | nothing => var nothing
+  | just a => termMaybe (f a)
+
+\func termMaybe {A : \Type} (a : Term A) : Term (Maybe A) \elim a
+  | var v => var (just v)
+  | unit => unit
+  | app t t1 => app (termMaybe t) (termMaybe t1)
+  | lam t => lam (termMaybe t)
+
+\func varEq {A : \Type} : var = fMaybe {A} var =>
+  funExt (\lam _ => Term (Maybe A)) {var} {fMaybe {A} var} (\lam x => \case \elim x \with {
+    | nothing => idp
+    | just a => idp
+  })
+
 \instance TermMonad : Monad Term
-  | fmap => {?}
-  | fmap-id => {?}
-  | fmap-comp => {?}
-  | return => {?}
-  | >>= => {?}
+  | return a => var a
+  | \infixl 1 >>= {A B : \Type} (ma : Term A) (f : A -> Term B) : Term B \elim ma {
+    | var v => f v
+    | unit => unit
+    | app t1 t2 => app (t1 >>= f) (t2 >>= f)
+    | lam t => lam (t >>= (fMaybe f))
+  }
+  | left-id a f => idp
+  | right-id {A : \Type} (ma : Term A) : (ma >>= var) = ma \elim ma {
+    | var v => idp
+    | unit => idp
+    | app t t1 => pmap (\lam x => app x (t1 >>= var)) (right-id t) *> pmap (\lam x => app t x) (right-id t1)
+    | lam t => pmap lam (transport (\lam x => (t >>= x) = t) varEq (right-id t))
+  }
+  | bind-assoc {A B C : \Type} (ma : Term A) (f : A -> Term B) (g : B -> Term C) :
+               (ma >>= (\lam x => f x >>= g)) = (ma >>= f >>= g) \elim ma {
+    | var v => idp
+    | unit => idp
+    | app t t1 => pmap (\lam x => app (t >>= (\lam x => f x >>= g)) x) (bind-assoc t1 f g) *>
+                  pmap (\lam x => app x (t1 >>= f >>= g)) (bind-assoc t f g)
+    | lam t => pmap lam (sym (pmap (\lam x => t >>= x) (fMaybePush f g)) *> bind-assoc t (fMaybe f) (fMaybe g))
+  }
+  \where {
+    \func fMaybePush {A B C : \Type} (f : A -> Term B) (g : B -> Term C) :
+                     (\lam x => fMaybe f x >>= fMaybe g) = fMaybe (\lam x => f x >>= g) =>
+      funExt (\lam _ => Term (Maybe C)) {(\lam x => (fMaybe f) x >>= fMaybe g)} {fMaybe (\lam x => f x >>= g)}
+             (\lam a => \case \elim a \with {
+               | nothing => idp
+               | just a => helper (f a) g
+             })
+    \func helper {A B : \Type} (a : Term A) (f : A -> Term B) : (termMaybe a >>= fMaybe f) = termMaybe (a >>= f) \elim a
+      | var v => idp
+      | unit => idp
+      | app t t1 => pmap (\lam x => app (termMaybe t >>= fMaybe f) x) (helper t1 f) *>
+                    pmap (\lam x => app x (termMaybe (t1 >>= f))) (helper t f)
+      | lam t => pmap lam (helper t (fMaybe f))
+  }
 
 -- 10. Определите отношение многошаговой редукции на Term.
 
