@@ -1,3 +1,7 @@
+\import Prelude
+\import hw02 (if)
+\import lect02 (-)
+\import lect06 (<b, Decide, no, yes)
 \import lect08
 \import Utils
 \open Nat(+,*)
@@ -7,15 +11,31 @@
 
 \func id' {A : \Type} (a : A) => a
 
-\func idTest1 => id' (id' id)
-\func idTest2 => id' Maybe
-\func idTest3 => id' Functor
-\func idTest4 => id' (Functor Maybe)
-\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) => id' (Functor Maybe f)
+\func idTest1 : \Pi (A : \Type \lp) (a : A) -> A => id' (\level (\suc \lp) _) (id' (\level (\suc \lp) _) id)
+\func idTest2 : \Type \lp -> \Type \lp => id' (\level (\suc \lp) _) Maybe
+\func idTest3 : \Type (\suc \lp) => id' (\level (\suc (\suc \lp)) _) Functor
+\func idTest4 : \Type (\suc \lp) => id' (\level (\suc (\suc \lp)) _) (Functor Maybe)
+\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type \lp => id' (\level (\suc \lp) _) (Functor Maybe f)
 
 -- 2. Определите div через Nat-ind.
+\func DecLess => \Pi (a a' : Nat) -> Decide (a < a')
 
-\func div (n k : Nat) (p : 0 < k) : Nat => {?}
+\func div (x y : Nat) => div' x x y
+  \where
+    \func div' (s x y : Nat) (dec : DecLess) : Nat \elim s
+      | 0 => 0
+      | suc s => \case dec x y \with {
+        | yes a => 0
+        | no n => (suc (div' s (x - y) y dec)) -- i have zero idea what's going on actually
+      }
+
+
+\func div'' (n k : Nat) (p : 0 < k) : Nat => Nat-ind (\lam _ => Nat) (aux k) n
+    \where
+      \func aux (y x : Nat)  (t : \Pi (k : Nat) -> k < x -> Nat) : Nat \elim y, x
+        | 0, _ => 0
+        | _, 0 => 0
+        | suc n, suc n1 => {?}
 
 -- 3. Докажите следующий принцип индукции для списков.
 
@@ -23,7 +43,16 @@
   {A : \Type}
   (E : List A -> \Type)
   (r : \Pi (xs : List A) -> (\Pi (ys : List A) -> length ys < length xs -> E ys) -> E xs)
-  (xs : List A) : E xs => {?}
+  (xs : List A) : E xs \elim xs
+  | nil => r nil (\lam l p => \case p \with {})
+  | cons a l => aux E r (cons a (cons a l)) (cons a l) <=-refl
+  \where
+    \func aux {A : \Type}
+              (E : List A -> \Type)
+              (r : \Pi (xs : List A) -> (\Pi (ys : List A) -> length ys < length xs -> E ys) -> E xs)
+              (xs ys : List A)
+              (p : length ys < length xs) : E ys \elim xs, p
+      | cons a l, Nat.suc<=suc < => r ys (\lam xs t => aux E r l xs (<=-trans t <))
 
 -- 4. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условия:
 --    * filter p xs является подсписком xs
