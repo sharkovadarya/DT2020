@@ -1,7 +1,9 @@
 \import Prelude
-\import hw02 (if)
+\import hw01
+\import hw06 (Sublist, hasMatch, isSublist, noMatchYet)
 \import lect02 (-)
-\import lect06 (<b, Decide, no, yes)
+\import lect05 (true/=false)
+\import lect06 (<b, Decide, filter, no, yes)
 \import lect08
 \import Utils
 \open Nat(+,*)
@@ -18,24 +20,17 @@
 \func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type \lp => id' (\level (\suc \lp) _) (Functor Maybe f)
 
 -- 2. Определите div через Nat-ind.
-\func DecLess => \Pi (a a' : Nat) -> Decide (a < a')
 
-\func div (x y : Nat) => div' x x y
-  \where
-    \func div' (s x y : Nat) (dec : DecLess) : Nat \elim s
-      | 0 => 0
-      | suc s => \case dec x y \with {
-        | yes a => 0
-        | no n => (suc (div' s (x - y) y dec)) -- i have zero idea what's going on actually
-      }
+\func decLess (a b : Nat) : Decide (a < b) \elim a, b
+  | 0, 0 => no (\lam p => \case p \with {})
+  | 0, suc n => yes (Nat.suc<=suc Nat.zero<=_)
+  | suc n, 0 => no (\lam p => \case p \with {})
+  | suc n, suc n1 => \case decLess n n1 \with {
+    | yes a => yes (Nat.suc<=suc a)
+    | no n => no {?}
+  }
 
-
-\func div'' (n k : Nat) (p : 0 < k) : Nat => Nat-ind (\lam _ => Nat) (aux k) n
-    \where
-      \func aux (y x : Nat)  (t : \Pi (k : Nat) -> k < x -> Nat) : Nat \elim y, x
-        | 0, _ => 0
-        | _, 0 => 0
-        | suc n, suc n1 => {?}
+\func div'' (n k : Nat) (p : 0 < k) : Nat => Nat-ind (\lam _ => Nat) (\lam x t => {?}) n
 
 -- 3. Докажите следующий принцип индукции для списков.
 
@@ -55,8 +50,39 @@
       | cons a l, Nat.suc<=suc < => r ys (\lam xs t => aux E r l xs (<=-trans t <))
 
 -- 4. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условия:
---    * filter p xs является подсписком xs
---    * Все элементы filter p xs удовлетворяют предикату p
---    * Любой подсписок xs с тем же свойством является подсписком filter p xs
+--    * filter p xs является подсписком xs <- filterIsSublist HW6
 
--- 5. Бонусное задание: докажите корректность любого алгоритма сортировки, отличного от сортировки вставками.
+
+--    * Все элементы filter p xs удовлетворяют предикату p
+-- ref: Sorted
+\data trueForAll {A : \Type} (xs : List A) (p : A -> Bool) \elim xs
+  | nil => nil-true
+  | cons a xs => all-true (p a = true) (trueForAll xs p)
+
+\func trueForAllFilterElements {A : \Type} (xs : List A) (p : A -> Bool) : trueForAll (filter p xs) p \elim xs
+  | nil => nil-true
+  | cons a l => \case p a \as b, idp : p a = b \return trueForAll (\case b \with {
+    | true => cons a (filter p l)
+    | false => filter p l
+  } ) p \with {
+    | true, q => all-true q (trueForAllFilterElements l p)
+    | false, _ => trueForAllFilterElements l p
+  }
+
+--    * Любой подсписок xs с тем же свойством является подсписком filter p xs
+\func trueForSublistFilter {A : \Type} (xs ys : List A) (s : Sublist ys xs) (p : A -> Bool) (t : trueForAll ys p) : Sublist ys (filter p xs) \elim xs, ys, s, t
+  | _, nil, _, nil-true => isSublist
+  | cons a l, cons a1 l1, hasMatch a=a1 s, all-true pa1 t => \case p a \as b, idp : p a = b \return Sublist (cons a1 l1) (\case b \with {
+    | true => cons a (filter p l)
+    | false => filter p l
+  }) \with {
+    | true, _ => hasMatch a=a1 (trueForSublistFilter l l1 s p t)
+    | false, pa => absurd (true/=false ((sym pa1) *> (pmap p a=a1) *> pa))
+  }
+  | cons a l, cons a1 l1, noMatchYet s, all-true pa1 t => \case p a \as b, idp : p a = b \return Sublist (cons a1 l1) (\case b \with {
+    | true => cons a (filter p l)
+    | false => filter p l
+  }) \with {
+    | true, _x => noMatchYet (trueForSublistFilter l (cons a1 l1) s p (all-true pa1 t))
+    | false, _x => trueForSublistFilter l (cons a1 l1) s p (all-true pa1 t)
+  }
