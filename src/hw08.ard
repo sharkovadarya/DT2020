@@ -13,6 +13,7 @@
 
 \func id' {A : \Type} (a : A) => a
 
+-- В idTest5 неправильно указан уровень id'
 \func idTest1 : \Pi (A : \Type \lp) (a : A) -> A => id' (\level (\suc \lp) _) (id' (\level (\suc \lp) _) id)
 \func idTest2 : \Type \lp -> \Type \lp => id' (\level (\suc \lp) _) Maybe
 \func idTest3 : \Type (\suc \lp) => id' (\level (\suc (\suc \lp)) _) Functor
