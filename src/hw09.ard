@@ -9,22 +9,32 @@
 -- Композиция функций
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) => {?}
+\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) => \lam x y t => p x y (q (f x) (f y) t)
 
-\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f => {?}
+\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f => \lam x y t => p x y (pmap g t)
 
 -- 2. Определите предикат "делится на 3 или на 5" так, чтобы он возвращал утверждения.
 --    Докажите, что MultipleOf3Or5 вкладывается в ℕ.
 
-\func isMultipleOf3Or5 (n : Nat) : \Type => {?}
+\func divisibleBy3 (n : Nat) : Bool => \case mod3 n \with {
+  | 0 => true
+  | suc n => false
+}
 
-\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => {?}
+\func divisibleBy5 (n : Nat) : Bool => \case mod5 n \with {
+  | 0 => true
+  | suc n => false
+}
+
+\func isMultipleOf3Or5 (n : Nat) : \Type => T (divisibleBy3 n || divisibleBy5 n)
+
+\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => \lam x y => T-lem
 
 \func MultipleOf3Or5 => \Sigma (n : Nat) (isMultipleOf3Or5 n)
 
 \func Mul-inc (m : MultipleOf3Or5) => m.1
 
-\func Mul-inc-isInj : isInj Mul-inc => {?}
+\func Mul-inc-isInj : isInj Mul-inc => \lam x y t => sigmaEq (\lam n => isMultipleOf3Or5 n) x y t T-lem
 
 -- 3. Мы будем говорить, что тип A тривиален, если существует элемент в A, такой что любой другой элемент в A равен ему.
 --    Докажите, что тип A тривиален тогда и только тогда, когда A является утверждением и A населен.
@@ -33,18 +43,23 @@
 
 \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
 
-\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => {?}
+\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => (\lam a => (\lam x y => (sym (a.2 x)) *> (a.2 y), a.1), \lam a => (a.2, \lam a1 => a.1 a.2 a1))
 
 -- 4. Докажите, что Either не является утверждением в общем случаем.
 
-\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Either A B)) : Empty => {?}
+\func T' {A B : \Type} (x : Either A B) : \Type \elim x
+  | Either.inl a => \Sigma
+  | Either.inr b => Empty
+
+\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Either A B)) : Empty =>
+  transport T' ((p {\Sigma} {\Sigma} Unit-isProp Unit-isProp) (Either.inl ()) (Either.inr ()))  ()
 
 -- 5. Докажите, что \Sigma сохраняет утверждения.
 
 \func Sigma-isProp {A : \Type} (pA : isProp A) (B : A -> \Type)
                     (pB : \Pi (x : A) -> isProp (B x))
   : isProp (\Sigma (x : A) (B x))
-  => {?}
+  => Sigma'-isProp B pA pB -- :)
 
 -- 6. Докажите, что LessOrEq и LessOrEq' являются предикатами.
 
@@ -81,7 +96,7 @@
 
 -- 8. Докажите, что если тип A вкладывается в тип B и B является утверждением, то и A является утверждением.
 
-\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => {?}
+\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => \lam x y => (p x y) (q (f x) (f y))
 
 -- 9. Докажите, что тип с разрешимым равенством являетя множеством.
 
