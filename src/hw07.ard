@@ -1,6 +1,7 @@
 \import Utils
 \import hw02 (gcd)
 \import hw05 (pmap2)
+\import hw06
 \import lect05 (funExt)
 \import lect06 (DecEq, Decide, no, yes)
 \import lect07
@@ -184,7 +185,7 @@
 
 -- 10. Определите отношение многошаговой редукции на Term.
 
-\func Red {V : \Type} (t s : Term V) : \Type => {?}
+\func Red {V : \Type} (t s : Term V) : \Type => ReflTransClosure Red1 t s
 
 -- 11. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
 --     Определите любую стратегию редукции.
