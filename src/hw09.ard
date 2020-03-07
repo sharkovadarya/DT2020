@@ -1,3 +1,5 @@
+\import hw01
+\import hw05 (zero/=suc)
 \import lect06
 \import lect09
 \import Utils
@@ -71,13 +73,38 @@
   | suc m => <=-step (LessOrEq' n m)
   | m => <=-refl (n = m)
 
-\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => {?}
+\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) \elim n, m
+  | 0, _ => \lam x y => \case \elim x, \elim y \with {
+    | z<=n, z<=n => idp
+  }
+  | suc n, 0 => \lam x y => \case \elim x, \elim y \with {}
+  | suc n, suc n1 => \lam x y => \case \elim x, \elim y \with {
+    | s<=s l, s<=s l1 => pmap s<=s (LessOrEq-isProp l l1)
+  }
 
 -- Для решения LessOrEq'-isProp понадобится тот факт, что Nat является множеством.
 -- Сейчас доказывать это не нужно доказывать, доказательство будет приведено позже.
 \func Nat-isSet : isSet Nat => {?}
 
-\func LessOrEq'-isProp {n m : Nat} : isProp (LessOrEq' n m) => {?}
+\func LessOrEq'-isProp {n m : Nat} : isProp (LessOrEq' n m) => \lam x y => aux x y
+    \where
+      \func aux {n m : Nat} (x y : LessOrEq' n m) : x = y \elim n, m, x, y
+        | n, m, <=-refl =, <=-refl =1 => pmap <=-refl ((Nat-isSet n m) = =1)
+        | n, suc m, <=-step l, <=-step l1 => pmap <=-step (aux l l1)
+        | n, suc m, <=-step l, <=-refl = => absurd (sucLessOrEq' l =)
+        | n, suc m, <=-refl =, <=-step l => absurd (sucLessOrEq' l =)
+      \func sucLessOrEq' {n m : Nat} (l : LessOrEq' n m) (eq : n = suc m) : Empty \elim n, m, l
+        | 0, m, _ => absurd (zero/=suc m eq)
+        | suc n, 0, <=-refl = => absurd (zero/=suc n (sym =))
+        | suc n, suc n1, <=-step l => sucLessOrEq' (decLessOrEq' l) (pmap dec eq)
+        | suc n, suc n1, <=-refl = => absurd (n/=suc n1 (pmap dec ((sym =) *> eq)))
+      \func decLessOrEq' {n m : Nat} (l : LessOrEq' (suc n) m ) : LessOrEq' n m \elim m, l
+        | 0, <=-refl = => absurd (zero/=suc n (sym =))
+        | suc n, <=-step l => <=-step (decLessOrEq' l)
+        | suc n, <=-refl = => <=-step (<=-refl (pmap dec =))
+      \func n/=suc (n : Nat) (p : n = suc n) : Empty \elim n
+        | 0 => zero/=suc 0 p
+        | suc n => n/=suc n (pmap dec p)
 
 -- 7. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 
@@ -98,10 +125,9 @@
 
 \func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => \lam x y => (p x y) (q (f x) (f y))
 
--- 9. Докажите, что тип с разрешимым равенством являетя множеством.
+-- 9. Докажите, что тип с разрешимым равенством является множеством.
 
-\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A
-  => {?}
+\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A => {?}
 
 -- 10. Если A и B являются множествами, то A `Or` B тоже является множеством.
 
