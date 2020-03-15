@@ -117,9 +117,22 @@
   | refl (x = y)
   | inc (R x y)
 
-\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => T (x < y)) n m) => {?}
+\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => T (x < y)) n m) => \lam a b => aux n m a b
+    \where
+      \func aux (n m : Nat) (a b : ReflClosure (\lam x y => T (x < y)) n m) : a = b \elim a, b
+        | refl =1, refl =2 => pmap refl (Nat-isSet n m =1 =2)
+        | refl =, inc r => absurd (lessNotEqual r =)
+        | inc r, refl = => absurd (lessNotEqual r =)
+        | inc r, inc r1 => pmap inc T-lem
+      \func lessNotEqual {n m : Nat} (p : T (n < m)) (q : n = m) : Empty \elim n, m, p
+        | 0, suc n, p => absurd (zero/=suc n q)
+        | suc n, suc n1, p => lessNotEqual p (pmap dec q)
 
-\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty => {?}
+\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty =>
+  transport (\lam x => \case \elim x \with {
+    | refl = => Empty
+    | inc r => \Sigma
+  }) (p 1 1 (inc (s<=s z<=n)) (refl idp)) ()
 
 -- 8. Докажите, что если тип A вкладывается в тип B и B является утверждением, то и A является утверждением.
 
